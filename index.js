@@ -13,8 +13,12 @@ const currentOptions = [
     "Sprachkurs oder Sonstiges ohne Zulassung/Language course or others without admission",
 ];
 const handler = async () => {
-    console.log("running handler");
-    await main();
+    try {
+        await main();
+    }
+    catch (e) {
+        await sendSlackMessage("error detected");
+    }
 };
 exports.handler = handler;
 async function main() {
@@ -39,17 +43,18 @@ async function main() {
         return Array.from(select.options, (s) => s.innerText);
     });
     const hasNewOption = !equals(newOptions, currentOptions);
-    await sendSlackMessage();
+    await sendSlackMessage("visa appointment available.");
     if (!hasNewOption) {
         return;
     }
-    await sendSlackMessage();
+    await sendSlackMessage("visa appointment available.");
+    await browser.close();
 }
 function equals(arr1, arr2) {
     return arr1.every((el) => arr2.includes(el));
 }
-async function sendSlackMessage() {
-    const MY_SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/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";
-    const slack = (0, slack_notify_1.default)(MY_SLACK_WEBHOOK_URL);
-    await slack.send("visa appointment available.");
+async function sendSlackMessage(message) {
+    var _a;
+    const slack = (0, slack_notify_1.default)(((_a = process === null || process === void 0 ? void 0 : process.env) === null || _a === void 0 ? void 0 : _a.MY_SLACK_WEBHOOK_URL) || "");
+    await slack.send(message);
 }

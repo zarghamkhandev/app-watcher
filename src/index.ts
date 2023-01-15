@@ -9,8 +9,11 @@ const currentOptions = [
 ];
 
 export const handler = async () => {
-  console.log("running handler");
-  await main();
+  try {
+    await main();
+  } catch (e) {
+    await sendSlackMessage("error detected");
+  }
 };
 
 async function main() {
@@ -41,18 +44,19 @@ async function main() {
     return Array.from(select.options, (s) => s.innerText);
   });
   const hasNewOption = !equals(newOptions, currentOptions);
-  await sendSlackMessage();
+  await sendSlackMessage("visa appointment available.");
   if (!hasNewOption) {
     return;
   }
-  await sendSlackMessage();
+  await sendSlackMessage("visa appointment available.");
+  await browser.close();
 }
 
 function equals(arr1: string[], arr2: string[]): boolean {
   return arr1.every((el) => arr2.includes(el));
 }
 
-async function sendSlackMessage(): Promise<void> {
+async function sendSlackMessage(message: string): Promise<void> {
   const slack = SlackNotify(process?.env?.MY_SLACK_WEBHOOK_URL || "");
-  await slack.send("visa appointment available.");
+  await slack.send(message);
 }
