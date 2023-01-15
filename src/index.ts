@@ -53,8 +53,6 @@ function equals(arr1: string[], arr2: string[]): boolean {
 }
 
 async function sendSlackMessage(): Promise<void> {
-  const MY_SLACK_WEBHOOK_URL =
-    "https://hooks.slack.com/services/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";
-  const slack = SlackNotify(MY_SLACK_WEBHOOK_URL);
+  const slack = SlackNotify(process?.env?.MY_SLACK_WEBHOOK_URL || "");
   await slack.send("visa appointment available.");
 }
