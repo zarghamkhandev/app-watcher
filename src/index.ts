@@ -3,8 +3,7 @@ import SlackNotify from "slack-notify";
 
 const currentOptions = [
   "",
-  "Wintersemester 2022-2023/Winter semester 2022-2023",
-  "Sommersemester 2023/Summer semester 2023",
+  "Sommersemester 2023/summer semester 2023",
   "Sprachkurs oder Sonstiges ohne Zulassung/Language course or others without admission",
 ];
 
@@ -44,7 +43,6 @@ async function main() {
     return Array.from(select.options, (s) => s.innerText);
   });
   const hasNewOption = !equals(newOptions, currentOptions);
-  await sendSlackMessage("visa appointment available.");
   if (!hasNewOption) {
     return;
   }
