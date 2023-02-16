@@ -1,19 +1,16 @@
 import chromium from "chrome-aws-lambda";
+import { Page } from "puppeteer-core";
 import SlackNotify from "slack-notify";
-
-const currentOptions = [
-  "",
-  "Sommersemester 2023/summer semester 2023",
-  "Sprachkurs oder Sonstiges ohne Zulassung/Language course or others without admission",
-];
 
 export const handler = async () => {
   try {
     await main();
   } catch (e) {
-    await sendSlackMessage("error detected");
+    await sendSlackMessage("error detected " + e?.message);
   }
 };
+
+/* handler().catch(console.log); */
 
 async function main() {
   const browser = await chromium.puppeteer.launch({
@@ -22,36 +19,71 @@ async function main() {
     executablePath: await chromium.executablePath,
     headless: chromium.headless,
     ignoreHTTPSErrors: true,
+    slowMo: 100,
   });
   const page = await browser.newPage();
+
+  await page.setUserAgent(
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36"
+  );
+
   await page.goto(
-    "https://service2.diplo.de/rktermin/extern/appointment_showForm.do?locationCode=isla&realmId=108&categoryId=1600"
-  );
-  const select = await page.$<HTMLSelectElement>(
-    "#appointment_newAppointmentForm_fields_3__content"
-  );
-  if (!select) {
-    throw new Error("could not find select");
-  }
-  const newOptions = await page.evaluate(() => {
-    const select = document.querySelector<HTMLSelectElement>(
-      "#appointment_newAppointmentForm_fields_4__content"
-    );
-    if (!select) {
-      throw new Error("select not found!");
+    "https://patienten.helios-gesundheit.de/appointments/book-appointment?facility=215&physician=83318&purpose=51438",
+    {
+      waitUntil: "networkidle2",
     }
-    return Array.from(select.options, (s) => s.innerText);
-  });
-  const hasNewOption = !equals(newOptions, currentOptions);
-  if (!hasNewOption) {
-    return;
+  );
+
+  await acceptCookies(page);
+  await navigateToStart(page);
+  const terminAvailable = await hasTermin(page);
+  if (terminAvailable) {
+    await sendSlackMessage("HNO termin is available");
   }
-  await sendSlackMessage("visa appointment available.");
+
   await browser.close();
 }
 
-function equals(arr1: string[], arr2: string[]): boolean {
-  return arr1.every((el) => arr2.includes(el));
+async function goNext(page: Page) {
+  const btn = await page.$<HTMLButtonElement>(
+    ".flickity-prev-next-button.next"
+  );
+  return btn?.click();
+}
+
+async function hasTermin(page: Page) {
+  let has = await hasNoticeSection(page);
+  if (has) {
+    return true;
+  }
+  await goNext(page);
+  return hasNoticeSection(page);
+}
+
+async function hasNoticeSection(page: Page) {
+  const calenderSection = await page.$<HTMLDivElement>(".calendar__notice");
+  return !calenderSection;
+}
+
+async function navigateToStart(page: Page) {
+  await page.waitForSelector(".flickity-prev-next-button.previous");
+  //
+  let btn = await page.$<HTMLButtonElement>(
+    ".flickity-prev-next-button.previous"
+  );
+  let disabled = await (await btn?.getProperty("disabled"))?.jsonValue();
+
+  while (!disabled) {
+    await btn?.click();
+    await page.waitForTimeout(500);
+    btn = await page.$<HTMLButtonElement>(".flickity-prev-next-button");
+    disabled = await (await btn?.getProperty("disabled"))?.jsonValue();
+  }
+}
+async function acceptCookies(page: Page) {
+  await page.waitForSelector("#popup__content .button-core-secondary");
+  const btn = await page.$("#popup__content .button-core-secondary");
+  return btn?.click();
 }
 
 async function sendSlackMessage(message: string): Promise<void> {

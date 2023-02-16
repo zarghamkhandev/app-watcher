@@ -9,7 +9,7 @@
     "build": "tsc",
     "dev": "nodemon index.js",
     "zip": "npm run build && zip -r function.zip .",
-    "sendToLambda": "npm run zip && aws s3 cp function.zip s3://visa-appointment-lamda-code && rm function.zip && aws lambda update-function-code --function-name visa-appointment --s3-bucket visa-appointment-lamda-code --s3-key function.zip"
+    "sendToLambda": "rm -rf node_modules && npm install && npm run build && npm run zip && aws s3 cp function.zip s3://hno-appointment-code && rm function.zip && aws lambda update-function-code --function-name hno-appointment --s3-bucket hno-appointment-code --s3-key function.zip"
   },
   "keywords": [],
   "author": "",
