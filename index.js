@@ -6,15 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.handler = void 0;
 const chrome_aws_lambda_1 = __importDefault(require("chrome-aws-lambda"));
 const slack_notify_1 = __importDefault(require("slack-notify"));
-const currentOptions = [
-    "",
-    "Stipendiat bei Finanzierung durch deutsche Wissenschafts- oder Mittlerorganisation z.B. DAAD oder AvH/Recipient of a full scholarship paid by an official German academic institution e.g. DAAD or AvH",
-    "Promotionsstudenten mit Zulassung einer deutschen Universität/Phd students holding an admission letter from a german university",
-    "Masterstudenten mit direkter Zulassung ohne Bedingungen für das Sommersemester 2023/Master students holding an unconditional direct admission letter from a German university valid for summer semester 2023",
-    "Bachelorstudenten mit direkter Zulassung ohne Bedingungen für das Sommersemester 2023/Bachelor students holding an unconditional direct admission letter from a German university valid for summer semester 2023",
-    "Studienvorbereitung (z.B. Sprachkurs mit anschließendem Studienkolleg)/Study preparation (e.g. language course followed by a foundation course)",
-    "Sprachkurse zu anderen als Studienzwecken/Language courses for purposes other than study",
-];
 const handler = async () => {
     try {
         await main();
@@ -24,7 +15,12 @@ const handler = async () => {
     }
 };
 exports.handler = handler;
+const compare = [
+    "Es sind keine Termine für die gewünschte Auswahl verfügbar!",
+    "Keine Termine verfügbar",
+];
 async function main() {
+    var _a, _b;
     const browser = await chrome_aws_lambda_1.default.puppeteer.launch({
         args: chrome_aws_lambda_1.default.args,
         defaultViewport: chrome_aws_lambda_1.default.defaultViewport,
@@ -33,31 +29,33 @@ async function main() {
         ignoreHTTPSErrors: true,
     });
     const page = await browser.newPage();
-    await page.goto("https://service2.diplo.de/rktermin/extern/appointment_showForm.do?locationCode=isla&realmId=108&categoryId=1600", { waitUntil: "domcontentloaded" });
-    const select = await page.$("#appointment_newAppointmentForm_fields_3__content");
-    if (!select) {
-        throw new Error("could not find select");
-    }
-    const newOptions = await page.evaluate(() => {
-        const select = document.querySelector("#appointment_newAppointmentForm_fields_3__content");
-        if (!select) {
-            throw new Error("select not found!");
-        }
-        return Array.from(select.options, (s) => s.innerText);
+    await page.goto("https://www.qtermin.de/qtermin-stadt-duisburg-abh-sued", {
+        waitUntil: "domcontentloaded",
     });
-    console.log(newOptions);
-    const hasNewOption = !equals(newOptions, currentOptions);
-    if (!hasNewOption) {
-        return;
+    await page.waitForNavigation();
+    await page.waitForTimeout(3000);
+    await pressPlus(page, "#\\33 87843");
+    await pressPlus(page, "#\\33 87844");
+    await pressPlus(page, "#\\33 87845");
+    await page.waitForTimeout(3000);
+    (_a = (await page.$("#bp1"))) === null || _a === void 0 ? void 0 : _a.click();
+    await page.waitForTimeout(3000);
+    const text = (_b = (await page.$eval("#divSlotsList", (el) => el.textContent))) !== null && _b !== void 0 ? _b : "";
+    await new Promise((res) => setTimeout(res, 3000));
+    console.log(text, "------------text");
+    if (!compare.includes(text)) {
+        await sendSlackMessage("duisburg ABH appointment is available");
     }
-    await sendSlackMessage("visa appointment available.");
+    await new Promise((res) => setTimeout(res, 3000));
     await browser.close();
-}
-function equals(arr1, arr2) {
-    return arr1.every((el) => arr2.includes(el));
 }
 async function sendSlackMessage(message) {
     var _a;
     const slack = (0, slack_notify_1.default)(((_a = process === null || process === void 0 ? void 0 : process.env) === null || _a === void 0 ? void 0 : _a.MY_SLACK_WEBHOOK_URL) || "");
     await slack.send(message);
+}
+async function pressPlus(page, id) {
+    var _a;
+    const card1 = await page.$(id);
+    (_a = (await (card1 === null || card1 === void 0 ? void 0 : card1.$(".counterPlus")))) === null || _a === void 0 ? void 0 : _a.click();
 }
