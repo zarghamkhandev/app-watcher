@@ -29,10 +29,10 @@ async function main() {
         ignoreHTTPSErrors: true,
     });
     const page = await browser.newPage();
+    await page.setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36");
     await page.goto("https://www.qtermin.de/qtermin-stadt-duisburg-abh-sued", {
-        waitUntil: "domcontentloaded",
+        waitUntil: "networkidle2",
     });
-    await page.waitForNavigation();
     await page.waitForTimeout(3000);
     await pressPlus(page, "#\\33 87843");
     await pressPlus(page, "#\\33 87844");
